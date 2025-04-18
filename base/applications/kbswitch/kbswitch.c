@@ -674,6 +674,16 @@ static BOOL RememberLastActive(HWND hwnd, HWND hwndFore)
     return TRUE;
 }
 
+static void OpenPreferences(HWND hwnd)
+{
+    INT_PTR ret = (INT_PTR)ShellExecute(hwnd, NULL,
+        TEXT("control.exe"), TEXT("input.dll"),
+        NULL, SW_SHOWNORMAL);
+    
+    if (ret <= 32)
+        MessageBox(hwnd, _T("Can't start input.dll"), NULL, MB_ICONERROR);
+}
+
 LRESULT CALLBACK
 WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -764,11 +774,7 @@ WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 
                 case ID_PREFERENCES:
                 {
-                    INT_PTR ret = (INT_PTR)ShellExecute(hwnd, NULL,
-                                                        TEXT("control.exe"), TEXT("input.dll"),
-                                                        NULL, SW_SHOWNORMAL);
-                    if (ret <= 32)
-                        MessageBox(hwnd, _T("Can't start input.dll"), NULL, MB_ICONERROR);
+                    OpenPreferences(hwnd);
                     break;
                 }
 
@@ -893,6 +899,8 @@ _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInst, LPTSTR lpCmdLine, INT nCmdSh
 
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
+        OpenPreferences(HWND_DESKTOP);
+
         CloseHandle(hMutex);
         return 1;
     }
