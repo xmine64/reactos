@@ -10,6 +10,15 @@
 #include <uxtheme.h>
 #include <uxundoc.h>
 #include <tmschema.h>
+#include <shlobj.h>
+
+typedef HRESULT (WINAPI *PFN_ENUMTHEMES)(LPCWSTR, ENUMTHEMEPROC, LPVOID);
+typedef HRESULT (WINAPI *PFN_GETTHEMEDEFAULTS)(LPCWSTR, LPWSTR, DWORD, LPWSTR, DWORD);
+typedef HRESULT (WINAPI *PFN_SETSYSTEMVISUALSTYLE)(PCWSTR, PCWSTR, PCWSTR, UINT);
+
+static PFN_ENUMTHEMES pfnEnumThemes = NULL;
+static PFN_GETTHEMEDEFAULTS pfnGetThemeDefaults = NULL;
+static PFN_SETSYSTEMVISUALSTYLE pfnSetSystemVisualStyle = NULL;
 
 typedef struct _SPI_ENTRY
 {
@@ -99,42 +108,34 @@ SetSystemVisualStyle_EnumThemeProc(
     lstrcpyW(ctx->ThemeFile, pszThemeFileName);
     ctx->Found = TRUE;
     skip("Theme found: %wS (%wS)\n", pszThemeFileName, pszThemeName);
-    return FALSE;
+    return TRUE;
 }
 
 static BOOL SetSystemVisualStyle_FindTheme(LPWSTR pszThemeFile, LPWSTR pszColor, LPWSTR pszSize)
 {
+    WCHAR szThemesPath[MAX_PATH];
     ENUM_THEME_CONTEXT EnumThemeContext = {0};
-    THEMENAMES ThemeNames;
 
-    EnumThemes(NULL, SetSystemVisualStyle_EnumThemeProc, &EnumThemeContext);
+    ZeroMemory(szThemesPath, sizeof(szThemesPath));
+    SHGetFolderPathW(NULL, CSIDL_RESOURCES, NULL, SHGFP_TYPE_DEFAULT, szThemesPath);
+    lstrcatW(szThemesPath, L"\\Themes");
+
+    pfnEnumThemes(szThemesPath, SetSystemVisualStyle_EnumThemeProc, &EnumThemeContext);
     if (EnumThemeContext.Found == FALSE)
     {
         skip("No theme file found to test against\n");
         return FALSE;
     }
-
-    if (EnumThemeColors(EnumThemeContext.ThemeFile, NULL, 0, &ThemeNames) != S_OK)
-    {
-        skip("No theme colors found to test against\n");
-        return FALSE;
-    }
-
-    if (EnumThemeSizes(EnumThemeContext.ThemeFile, NULL, 0, &ThemeNames) != S_OK)
-    {
-        skip("No theme sizes found to test against\n");
-        return FALSE;
-    }
-
     lstrcpyW(pszThemeFile, EnumThemeContext.ThemeFile);
-    lstrcpyW(pszColor, ThemeNames.szName);
-    lstrcpyW(pszSize, ThemeNames.szName);
+    pfnGetThemeDefaults(EnumThemeContext.ThemeFile, pszColor, MAX_PATH, pszSize, MAX_PATH);
 
     return TRUE;
 }
 
 START_TEST(SetSystemVisualStyle)
 {
+    HMODULE hUxTheme = GetModuleHandleW(L"uxtheme.dll");
+
     HRESULT hr;
     HTHEMEFILE hThemeFile = NULL;
     HTHEME hTheme = NULL;
@@ -153,6 +154,26 @@ START_TEST(SetSystemVisualStyle)
     LOGFONTW ThemeFont = {0}, SystemFont = {0};
     NONCLIENTMETRICSW NonClientMetrics = {0};
 
+    /* Initialize PFNs */
+    pfnEnumThemes = (PFN_ENUMTHEMES)GetProcAddress(hUxTheme, (LPCSTR)8);
+    if (!pfnEnumThemes)
+    {
+        skip("EnumThemes not found in uxtheme.dll\n");
+        return;
+    }
+    pfnGetThemeDefaults = (PFN_GETTHEMEDEFAULTS)GetProcAddress(hUxTheme, (LPCSTR)7);
+    if (!pfnGetThemeDefaults)
+    {
+        skip("GetThemeDefaults not found in uxtheme.dll\n");
+        return;
+    }
+    pfnSetSystemVisualStyle = (PFN_SETSYSTEMVISUALSTYLE)GetProcAddress(hUxTheme, (LPCSTR)65);
+    if (!pfnSetSystemVisualStyle)
+    {
+        skip("SetSystemVisualStyle not found in uxtheme.dll\n");
+        return;
+    }
+
     /* Backup the current theme, to restore at the end of the test */
     GetCurrentThemeName(oldTheme, MAX_PATH,
                         oldColor, MAX_PATH,
@@ -166,10 +187,10 @@ START_TEST(SetSystemVisualStyle)
     }
 
     /* Apply Windows Classic theme first */
-    SetSystemVisualStyle(NULL, NULL, NULL, Flags);
+    pfnSetSystemVisualStyle(NULL, NULL, NULL, Flags);
 
     /* Apply test theme */
-    hr = SetSystemVisualStyle(ThemeName, ColorScheme, SizeScheme, Flags);
+    hr = pfnSetSystemVisualStyle(ThemeName, ColorScheme, SizeScheme, Flags);
     if (hr != S_OK)
     {
         skip("SetSystemVisualStyle failed: 0x%lx\n", hr);
@@ -251,7 +272,7 @@ START_TEST(SetSystemVisualStyle)
 
 cleanup:
     /* Restore user theme */
-    SetSystemVisualStyle(oldTheme, oldColor, oldSize, Flags);
+    pfnSetSystemVisualStyle(oldTheme, oldColor, oldSize, Flags);
 
     if (hTheme)
         CloseThemeData(hTheme);
