@@ -79,6 +79,7 @@ BASE_SEARCH_PATH_TYPE BaseProcessOrder[BaseSearchPathMax] =
 };
 
 BASE_CURRENT_DIR_PLACEMENT BasepDllCurrentDirPlacement = BaseCurrentDirPlacementInvalid;
+BOOLEAN BasepDllCurrentDirPlacementPermanent = FALSE;
 
 extern UNICODE_STRING BasePathVariableName;
 
@@ -1113,6 +1114,50 @@ GetFullPathNameW(IN LPCWSTR lpFileName,
                                 nBufferLength * sizeof(WCHAR),
                                 lpBuffer,
                                 lpFilePart) / sizeof(WCHAR);
+}
+
+/*
+ * @implemented
+ */
+BOOL
+WINAPI
+SetSearchPathMode(_In_ DWORD dwFlags)
+{
+    if (dwFlags & BASE_SEARCH_PATH_PERMANENT)
+    {
+        dwFlags &= ~BASE_SEARCH_PATH_PERMANENT;
+
+        /* Official documentations states this flag can't be used with BASE_SEARCH_PATH_PERMANENT */
+        if (dwFlags == BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE)
+        {
+            SetLastError(ERROR_INVALID_PARAMETER);
+            return FALSE;
+        }
+
+        /* ERROR_ACCESS_DENIED should be returned when BASE_SEARCH_PATH_PERMANENT is already set */
+        if (BasepDllCurrentDirPlacementPermanent)
+        {
+            SetLastError(ERROR_ACCESS_DENIED);
+            return FALSE;
+        }
+
+        BasepDllCurrentDirPlacementPermanent = TRUE;
+    }
+
+    switch (dwFlags)
+    {
+        case BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE:
+            BasepDllCurrentDirPlacement = BaseCurrentDirPlacementSafe;
+            return TRUE;
+
+        case BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE:
+            BasepDllCurrentDirPlacement = BaseCurrentDirPlacementDefault;
+            return TRUE;
+
+        default:
+            SetLastError(ERROR_INVALID_PARAMETER);
+            return FALSE;
+    }
 }
 
 /*
