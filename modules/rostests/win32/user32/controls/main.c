@@ -32,7 +32,8 @@ static PAGE g_Pages[] =
     { PAGE_LISTBOX,     L"List Boxes",      ListBoxPageProc },
     { PAGE_MDI,         L"MDI",             MdiPageProc },
     { PAGE_MENU,        L"Menus",           MenuPageProc },
-    { PAGE_SCROLLBAR,   L"Scroll Bars",     ScrollBarPageProc }
+    { PAGE_SCROLLBAR,   L"Scroll Bars",     ScrollBarPageProc },
+    { PAGE_STATIC,      L"Static",          StaticPageProc }
 };
 
 static

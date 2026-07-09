@@ -9,7 +9,8 @@ add_executable(user32_control_gallery
                pages/listbox.c
                pages/mdi.c
                pages/menu.c
-               pages/scrollbar.c)
+               pages/scrollbar.c
+               pages/static.c)
 
 set_module_type(user32_control_gallery win32gui UNICODE)
 add_importlibs(user32_control_gallery gdi32 user32 msvcrt kernel32 ntdll)
