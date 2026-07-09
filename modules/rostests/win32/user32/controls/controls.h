@@ -20,6 +20,7 @@ typedef enum _PAGES
     PAGE_MDI,
     PAGE_MENU,
     PAGE_SCROLLBAR,
+    PAGE_STATIC,
     PAGE_MAX
 } PAGE_ID;
 
@@ -131,3 +132,6 @@ LRESULT MenuPageProc(PPAGE_HOST PageHost, UINT msg, WPARAM wParam, LPARAM lParam
 #define IDC_SCROLLBAR_PAGE_CONTAINER 9000
 
 LRESULT ScrollBarPageProc(PPAGE_HOST PageHost, UINT msg, WPARAM wParam, LPARAM lParam);
+
+/* static page */
+LRESULT StaticPageProc(PPAGE_HOST PageHost, UINT msg, WPARAM wParam, LPARAM lParam);
