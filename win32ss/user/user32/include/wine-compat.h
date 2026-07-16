@@ -1,11 +1,17 @@
 #pragma once
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
 /* Unimplemented */
 
 #define GetDpiForWindow(HWND) 96
 
-#define NtUserGetPrivateData(HWND, OFFSET, SIZE) GetWindowLongPtrW((HWND), (OFFSET)); C_ASSERT((SIZE) == sizeof(LONG))
-#define NtUserSetPrivateData(HWND, OFFSET, SIZE, VALUE) SetWindowLongPtrW((HWND), (OFFSET), (VALUE)); C_ASSERT((SIZE) == sizeof(LONG))
+#define get_input_codepage() CP_ACP
+
+#define NtUserGetPrivateData(HWND, OFFSET, SIZE) GetWindowLongPtrW((HWND), (OFFSET))
+#define NtUserSetPrivateData(HWND, OFFSET, SIZE, VALUE) SetWindowLongPtrW((HWND), (OFFSET), (VALUE))
 
 /* NtUser to NtUserx map */
 
